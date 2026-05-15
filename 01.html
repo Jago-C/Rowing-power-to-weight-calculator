@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rowing Toolkit Pro Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+--bg:#f2f0eb;
+--surface:#ffffff;
+--border:#c5c2ba; 
+--text:#1a1a1a;
+--muted:#5a5a54; 
+--accent:#1a6b3c;
+--accent-light:#e8f5ee;
+--danger:#c0392b;
+--gold:#b8860b;
+--tech-1: #e74c3c;
+--tech-2: #e67e22;
+--tech-3: #f1c40f;
+--tech-4: #2ecc71;
+--tech-5: #27ae60;
+}
+
+body{background:var(--bg);font-family:'Syne',sans-serif;color:var(--text);padding:40px 18px 80px; line-height: 1.5;}
+.container{max-width:1500px;margin:auto;}
+
+header{text-align:center;margin-bottom:36px;}
+.site-title{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px; font-weight: 700;}
+h1{font-size:clamp(42px,8vw,82px);line-height:.92;font-weight:800; letter-spacing: -0.02em;}
+h1 span{color:var(--accent);}
+
+/* TABS */
+.tabs{display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;margin-bottom:22px; justify-content: center;}
+.tab{border:none;background:var(--surface);border:2px solid var(--border);padding:12px 20px;border-radius:999px;font-family:'Space Mono',monospace;cursor:pointer;white-space:nowrap;font-size:14px; font-weight: 700; transition: all 0.2s;}
+.tab.active{background:var(--accent);color:white;border-color:var(--accent);}
+
+.tool{display:none;}
+.tool.active{display:block;}
+
+/* GENERAL UI */
+.card{background:var(--surface);border:2px solid var(--border);border-radius:22px;padding:34px;box-shadow:0 8px 30px rgba(0,0,0,.08); margin-bottom: 20px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;}
+label{display:block;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--text);margin-bottom:10px; font-weight: 700;}
+
+input[type="text"], input[type="number"], input:not([type]), .time-input {
+    width:100%; background:var(--bg); border:2px solid var(--border); border-radius:12px; 
+    padding:16px; font-size:32px; font-family:'Space Mono',monospace; font-weight:700;
+}
+input:focus { outline:none; border-color:var(--accent); background:var(--accent-light); }
+
+button.calc{margin-top:22px;border:none;background:var(--accent);color:white;padding:15px 24px;border-radius:12px;font-family:'Space Mono',monospace;cursor:pointer;font-weight:700;}
+
+.result{margin-top:28px;background:var(--bg);border:2px solid var(--border);border-radius:18px;padding:24px;}
+.big{font-size:clamp(32px,6vw,72px);font-family:'Space Mono',monospace;font-weight:700;color:var(--accent);line-height:1;}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:20px;}
+.stat{background:white;border:2px solid var(--border);border-radius:12px;padding:14px;}
+.stat p{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;}
+.stat strong{font-family:'Space Mono',monospace;font-size:22px;}
+
+/* ── LINEUP DASHBOARD LAYOUT ── */
+.dashboard-layout{
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 30px;
+  align-items: start;
+}
+
+.lineup-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;background:var(--accent-light); padding: 15px 25px; border-radius: 18px; border: 2px dashed var(--accent);}
+.lineup-title{font-size:20px;font-weight:800;}
+.btn-add-boat{display:flex;align-items:center;gap:8px;border:none;background:var(--accent);color:white;padding:14px 24px;border-radius:999px;font-family:'Space Mono',monospace;font-size:13px;cursor:pointer;font-weight:700;box-shadow: 0 4px 12px rgba(26, 107, 60, 0.2);}
+
+/* BOAT CARD & REMOVAL ANIMATION */
+.boat-card{
+    background:var(--surface);
+    border:2px solid var(--border);
+    border-radius:24px;
+    overflow:hidden;
+    box-shadow:0 4px 20px rgba(0,0,0,0.06); 
+    margin-bottom:32px; 
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 2000px;
+    opacity: 1;
+    transform: scale(1);
+}
+
+.boat-card.removing {
+    opacity: 0;
+    max-height: 0;
+    margin-bottom: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+}
+
+.boat-card-header{display:flex;align-items:center;justify-content:space-between;padding:20px 28px;border-bottom:2px solid var(--border);background:#faf9f6;}
+.boat-name-input{background:transparent;border:none;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);width:100%; outline:none;}
+
+/* STYLED BOAT SELECT */
+.boat-type-select {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 999px;
+    padding: 8px 36px 8px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 10px;
+}
+
+.seat-table{width:100%;border-collapse:collapse;}
+.seat-table th{font-family:'Space Mono',monospace;font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;padding:12px 8px;border-bottom:1px solid var(--border);}
+.seat-row td{padding:12px 8px; vertical-align:middle; border-bottom: 1px solid #eee;}
+
+.seat-badge{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:6px 8px;display:inline-block;min-width:60px;text-align:center;}
+.seat-name-input{width:100%;background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:12px;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;}
+
+.seat-time-wrap{display:flex;align-items:center;gap:6px;}
+/* MUCH WIDER 2K INPUTS */
+.seat-time-mins{width:90px; background:var(--bg); border:2px solid var(--border); border-radius:10px; padding:12px 5px; font-family:'Space Mono',monospace; font-size:18px; font-weight:700; text-align:center;}
+.seat-time-secs{width:160px; background:var(--bg); border:2px solid var(--border); border-radius:10px; padding:12px 8px; font-family:'Space Mono',monospace; font-size:18px; font-weight:700; text-align:center;}
+
+.tech-bar{display:flex; gap:4px; background:var(--bg); padding:4px; border-radius:12px; border:2px solid var(--border);}
+.tech-btn{
+    border:none; width:34px; height:34px; border-radius:8px; cursor:pointer; 
+    font-family:'Space Mono',monospace; font-size:12px; font-weight:700; 
+    transition: all 0.2s; opacity: 0.3; background: white;
+}
+.tech-btn.active{ opacity: 1; transform: scale(1.1); color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);}
+.t-1.active{background: var(--tech-1);}
+.t-2.active{background: var(--tech-2);}
+.t-3.active{background: var(--tech-3);}
+.t-4.active{background: var(--tech-4);}
+.t-5.active{background: var(--tech-5);}
+
+/* SIDEBAR STATS */
+.sticky-sidebar{ position: sticky; top: 20px; }
+.sidebar-card{background:var(--surface);border:2px solid var(--accent);border-radius:22px;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,0.1);}
+.compare-metric{margin-bottom:24px; padding-bottom: 15px; border-bottom: 1px solid #eee;}
+.compare-metric:last-child{border-bottom:none;}
+.compare-bar-wrap{height:28px; border-radius:8px; background:#e0ddd5; overflow:hidden; margin-top: 8px;}
+.compare-bar{height:100%; border-radius:8px; position:relative; display:flex; align-items:center; justify-content:flex-end; padding-right:10px; transition: width 0.4s ease-out;}
+.compare-bar span{font-family:'Space Mono',monospace; font-weight:700; font-size:11px; color:white; text-shadow: 0 1px 2px rgba(0,0,0,0.2);}
+
+@media(max-width:1100px){
+    .dashboard-layout{ grid-template-columns: 1fr; }
+    .sticky-sidebar{ position: static; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <p class="site-title">Elite Rowing Systems</p>
+  <h1>Performance<span>Toolkit</span></h1>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab(event,'power')">Power</button>
+  <button class="tab" onclick="switchTab(event,'split')">Split</button>
+  <button class="tab" onclick="switchTab(event,'watts')">Watts</button>
+  <button class="tab" onclick="switchTab(event,'predictor')">Predictor</button>
+  <button class="tab" onclick="switchTab(event,'zones')">Zones</button>
+  <button class="tab" onclick="switchTab(event,'lineup')">Lineup Dashboard</button>
+</div>
+
+<div class="tool active" id="power">
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label>2k Time</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input class="time-input" id="pmins" placeholder="6">
+          <span style="font-size:28px; font-family:'Space Mono'; font-weight:700;">:</span>
+          <input class="time-input" id="psecs" placeholder="58.0">
+        </div>
+      </div>
+      <div>
+        <label>Bodyweight (kg)</label>
+        <input id="pweight" type="number" placeholder="75">
+      </div>
+    </div>
+    <button class="calc" onclick="calcPower()">Calculate Performance</button>
+    <div class="result">
+      <label>Power to Weight</label>
+      <div class="big" id="pwResult">—</div>
+      <div class="stats">
+        <div class="stat"><p>Average Watts</p><strong id="pwWatts">—</strong></div>
+        <div class="stat"><p>500m Split</p><strong id="pwSplit">—</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tool" id="split">
+  <div class="card">
+    <div class="grid">
+      <div><label>Distance (m)</label><input id="sdistance" type="number" placeholder="2000"></div>
+      <div>
+        <label>Total Time</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input class="time-input" id="smins" placeholder="7">
+          <span style="font-weight:bold">:</span>
+          <input class="time-input" id="ssecs" placeholder="00">
+        </div>
+      </div>
+    </div>
+    <button class="calc" onclick="calcSplit()">Calculate Split</button>
+    <div class="result">
+      <label>Required Split</label>
+      <div class="big" id="splitResult">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="tool" id="watts">
+  <div class="card">
+    <div class="grid">
+      <div><label>Watts</label><input id="wInput" type="number" placeholder="250"></div>
+      <div>
+        <label>Split</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input class="time-input" id="wmins" placeholder="1">
+          <span style="font-weight:bold">:</span>
+          <input class="time-input" id="wsecs" placeholder="45">
+        </div>
+      </div>
+    </div>
+    <button class="calc" onclick="convertWatts()">Convert Watts/Split</button>
+    <div class="result">
+      <div class="stats">
+        <div class="stat"><p>Watts → Split</p><strong id="wattsSplit">—</strong></div>
+        <div class="stat"><p>Split → Watts</p><strong id="splitWatts">—</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tool" id="predictor">
+  <div class="card">
+    <label>2k PB Time</label>
+    <div style="display:flex; align-items:center; gap:8px; max-width:400px">
+      <input class="time-input" id="prmins" placeholder="6">
+      <span style="font-weight:bold">:</span>
+      <input class="time-input" id="prsecs" placeholder="40">
+    </div>
+    <button class="calc" onclick="predict()">Generate Predictions</button>
+    <div class="result">
+      <label>Target Distance Splits</label>
+      <div class="stats" id="predictions"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tool" id="zones">
+  <div class="card">
+    <label>Current 2k Time</label>
+    <div style="display:flex; align-items:center; gap:8px; max-width:400px">
+      <input class="time-input" id="zmins" placeholder="6">
+      <span style="font-weight:bold">:</span>
+      <input class="time-input" id="zsecs" placeholder="40">
+    </div>
+    <button class="calc" onclick="zones()">Calculate Intensity</button>
+    <div class="result">
+      <label>Training Zones</label>
+      <div class="stats" id="zoneResults"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tool" id="lineup">
+  <div class="dashboard-layout">
+    <div class="main-content">
+      <div class="lineup-header">
+        <div>
+            <span class="lineup-title">Boat Management</span>
+            <p style="font-size: 11px; color: var(--accent); font-weight: 700;">Stats update instantly as you edit.</p>
+        </div>
+        <button class="btn-add-boat" onclick="addBoat()">+ Add Another Boat</button>
+      </div>
+      <div id="boatsGrid"></div>
+    </div>
+
+    <div class="sticky-sidebar">
+      <div class="sidebar-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <p class="site-title" style="margin-bottom:0">Live Comparison</p>
+            <button class="tab" onclick="exportCSV()" style="font-size:10px; padding: 5px 10px; border-color:var(--accent); color:var(--accent)">Export CSV</button>
+        </div>
+        <div id="compareCard"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+/* SHARED LOGIC */
+function switchTab(e,id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  e.target.classList.add('active');
+  document.querySelectorAll('.tool').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function getSecs(mins,secs){return(parseFloat(mins)||0)*60+(parseFloat(secs)||0);}
+function formatSplit(total){
+  if(!total||isNaN(total))return'—';
+  const m=Math.floor(total/60);
+  const s=(total%60).toFixed(1).padStart(4,'0');
+  return`${m}:${s}`;
+}
+function splitToWatts(split){return 2.8*Math.pow(500/split,3);}
+function wattsToSplit(watts){return 500/Math.cbrt(watts/2.8);}
+
+/* CALCULATORS */
+function calcPower(){
+  const total=getSecs(document.getElementById('pmins').value,document.getElementById('psecs').value);
+  const weight=parseFloat(document.getElementById('pweight').value);
+  const split=total/4; const watts=splitToWatts(split); const pw=watts/weight;
+  document.getElementById('pwResult').innerText=(pw||0).toFixed(2)+' W/kg';
+  document.getElementById('pwWatts').innerText=Math.round(watts||0)+'W';
+  document.getElementById('pwSplit').innerText=formatSplit(split);
+}
+function calcSplit(){
+  const dist=parseFloat(document.getElementById('sdistance').value);
+  const total=getSecs(document.getElementById('smins').value,document.getElementById('ssecs').value);
+  const split=total/(dist/500);
+  document.getElementById('splitResult').innerText=formatSplit(split)+'/500m';
+}
+function convertWatts(){
+  const watts=parseFloat(document.getElementById('wInput').value);
+  const splitSecs=getSecs(document.getElementById('wmins').value,document.getElementById('wsecs').value);
+  if(watts)document.getElementById('wattsSplit').innerText=formatSplit(wattsToSplit(watts));
+  if(splitSecs)document.getElementById('splitWatts').innerText=Math.round(splitToWatts(splitSecs))+'W';
+}
+function predict(){
+  const total=getSecs(document.getElementById('prmins').value,document.getElementById('prsecs').value);
+  const wrap=document.getElementById('predictions'); wrap.innerHTML='';
+  [500,1000,4000,5000,6000].forEach(d=>{
+    const predicted=total*Math.pow(d/2000,1.06);
+    wrap.innerHTML+=`<div class="stat"><p>${d}m</p><strong>${formatSplit(predicted)}</strong></div>`;
+  });
+}
+function zones(){
+  const total2k=getSecs(document.getElementById('zmins').value,document.getElementById('zsecs').value);
+  const split=total2k/4;
+  const data={'UT2':split+18,'UT1':split+12,'AT':split+6,'TR':split+2,'AN':split-2};
+  const wrap=document.getElementById('zoneResults'); wrap.innerHTML='';
+  Object.entries(data).forEach(([name,val])=>{
+    wrap.innerHTML+=`<div class="stat"><p>${name}</p><strong>${formatSplit(val)}</strong></div>`;
+  });
+}
+
+/* ════════ LINEUP MODULE ════════ */
+const BOAT_TYPES={'1x':{label:'1x Single',seats:1},'2x':{label:'2x Double',seats:2},'2-':{label:'2- Pair',seats:2},'4x':{label:'4x Quad',seats:4},'4-':{label:'4- Four',seats:4},'4+':{label:'4+ Coxed Four',seats:4},'8+':{label:'8+ Eight',seats:8}};
+const SEAT_LABELS={1:['Stroke'], 2:['Stroke','Bow'], 4:['Stroke','3','2','Bow'], 8:['Stroke','7','6','5','4','3','2','Bow']};
+
+let boats=[];
+let boatCounter=0;
+
+function addBoat(){
+  const id=++boatCounter;
+  boats.push({id,name:'',type:'8+',seats:buildSeats('8+')});
+  renderBoats();
+  setTimeout(() => {
+    const el = document.getElementById(`boat-${id}`);
+    if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+}
+
+function buildSeats(type){
+  const count=BOAT_TYPES[type].seats;
+  const labels=SEAT_LABELS[count]||Array.from({length:count},(_,i)=>`Seat ${i+1}`);
+  return labels.map((l)=>({label:l,name:'',mins:'',secs:'',tech:3}));
+}
+
+function setTech(boatId, seatIdx, val){
+    const boat = boats.find(b => b.id === boatId);
+    boat.seats[seatIdx].tech = val;
+    renderBoats();
+}
+
+function renderBoats(){
+  const grid=document.getElementById('boatsGrid');
+  boats.forEach(b=>{ if(document.getElementById(`boat-${b.id}`)) readBoatFromDOM(b); });
+  grid.innerHTML='';
+  boats.forEach(boat=>grid.appendChild(buildBoatCard(boat)));
+  boats.forEach(b => updateStats(b.id)); 
+}
+
+function buildBoatCard(boat){
+  const wrap=document.createElement('div');
+  wrap.className='boat-card'; wrap.id=`boat-${boat.id}`;
+  const typeOptions=Object.entries(BOAT_TYPES).map(([k,v])=>`<option value="${k}"${boat.type===k?' selected':''}>${v.label}</option>`).join('');
+
+  wrap.innerHTML=`
+    <div class="boat-card-header">
+      <input class="boat-name-input" oninput="updateStats(${boat.id})" placeholder="BOAT NAME..." value="${boat.name}">
+      <div style="display:flex; gap:10px;">
+        <select class="boat-type-select" onchange="changeType(${boat.id},this.value)">${typeOptions}</select>
+        <button class="tab" style="color:var(--danger); border-color:var(--danger); padding: 5px 12px; font-size:11px;" onclick="removeBoat(${boat.id})">Remove</button>
+      </div>
+    </div>
+    <div style="padding:20px;">
+      <table class="seat-table">
+        <thead><tr><th>Seat</th><th>Rower</th><th style="width:280px">2k Time</th><th style="width:200px">Tech</th></tr></thead>
+        <tbody>
+          ${boat.seats.map((s,i)=>`
+          <tr class="seat-row">
+            <td><span class="seat-badge">${s.label}</span></td>
+            <td><input class="seat-name-input" placeholder="NAME" data-seat="${i}" data-field="name" value="${s.name}" oninput="updateStats(${boat.id})"></td>
+            <td>
+              <div class="seat-time-wrap">
+                <input class="seat-time-mins" type="number" placeholder="MM" data-seat="${i}" data-field="mins" value="${s.mins}" oninput="updateStats(${boat.id})">
+                <span style="font-weight:bold">:</span>
+                <input class="seat-time-secs" type="number" placeholder="SS.s" step="0.1" data-seat="${i}" data-field="secs" value="${s.secs}" oninput="updateStats(${boat.id})">
+              </div>
+            </td>
+            <td>
+              <div class="tech-bar">
+                ${[1,2,3,4,5].map(v => `<button class="tech-btn t-${v} ${s.tech==v?'active':''}" onclick="setTech(${boat.id}, ${i}, ${v})">${v}</button>`).join('')}
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  return wrap;
+}
+
+function readBoatFromDOM(boat){
+  const card=document.getElementById(`boat-${boat.id}`);
+  if(!card) return;
+  boat.name=card.querySelector('.boat-name-input').value;
+  boat.seats.forEach((s,i)=>{
+    s.name=card.querySelector(`[data-seat="${i}"][data-field="name"]`).value;
+    s.mins=card.querySelector(`[data-seat="${i}"][data-field="mins"]`).value;
+    s.secs=card.querySelector(`[data-seat="${i}"][data-field="secs"]`).value;
+  });
+}
+
+function updateStats(id){
+  const boat=boats.find(b=>b.id===id);
+  if(!boat) return;
+  readBoatFromDOM(boat);
+  const times=boat.seats.map(s=>(parseFloat(s.mins)||0)*60+(parseFloat(s.secs)||0)).filter(t=>t>0);
+  if(!times.length) { delete boat._data; renderCompare(); return; }
+
+  const avg2k = times.reduce((a,b)=>a+b,0)/times.length;
+  const avgTech = boat.seats.reduce((a,b)=>a+b.tech,0)/boat.seats.length;
+  const watts = 2.8 * Math.pow(500/(avg2k/4), 3);
+
+  boat._data = {avg2k, avgTech, watts, name: boat.name || `Boat ${id}`};
+  renderCompare();
+}
+
+function renderCompare(){
+  const computed = boats.filter(b=>b._data);
+  const card = document.getElementById('compareCard');
+  if(computed.length < 2) { card.innerHTML = `<p style="text-align:center; color:var(--muted); font-size:12px; padding: 40px 0;">Add 2+ boats with 2k times to see live comparisons.</p>`; return; }
+  
+  const metrics = [
+    {label:'Avg Power (Watts)', key:'watts', high:true},
+    {label:'Avg Tech Rating', key:'avgTech', high:true, gradient:true},
+    {label:'Avg 2k Speed', key:'avg2k', high:false}
+  ];
+
+  card.innerHTML = metrics.map(m=>{
+    const vals = computed.map(b=>b._data[m.key]);
+    const best = m.high ? Math.max(...vals) : Math.min(...vals);
+    return `
+      <div class="compare-metric">
+        <label style="font-size:10px">${m.label}</label>
+        ${computed.map(b=>{
+            const val = b._data[m.key];
+            const pct = Math.max(m.high ? (val/best)*100 : (best/val)*100, 15);
+            const bg = m.gradient ? 'linear-gradient(90deg, var(--tech-1), var(--tech-5))' : 'var(--accent)';
+            return `<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px"><span style="width:110px; font-size:11px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${b._data.name}</span><div class="compare-bar-wrap" style="flex:1"><div class="compare-bar" style="width:${pct}%; background:${bg}"><span>${m.key==='avg2k'?formatSplit(val):Math.round(val*10)/10}</span></div></div></div>`;
+        }).join('')}
+      </div>`;
+  }).join('');
+}
+
+function exportCSV() {
+    const computed = boats.filter(b => b._data);
+    if (!computed.length) return;
+    let csv = "data:text/csv;charset=utf-8,Boat Name,Avg 2k,Avg Tech,Avg Watts\n";
+    computed.forEach(b => { csv += `"${b._data.name}",${formatSplit(b._data.avg2k)},${b._data.avgTech.toFixed(1)},${Math.round(b._data.watts)}\n`; });
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csv));
+    link.setAttribute("download", `rowing_analysis.csv`);
+    document.body.appendChild(link);
+    link.click();
+}
+
+function changeType(id,t){ const b=boats.find(x=>x.id===id); b.type=t; b.seats=buildSeats(t); renderBoats(); }
+
+function removeBoat(id){ 
+    const el = document.getElementById(`boat-${id}`);
+    if(!el) return;
+    el.classList.add('removing');
+    setTimeout(() => {
+        boats = boats.filter(b => b.id !== id);
+        renderBoats();
+    }, 400);
+}
+
+addBoat();
+</script>
+</body>
+</html>
